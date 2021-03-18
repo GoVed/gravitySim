@@ -1,5 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Feb  7 12:52:56 2021
+
+@author: vedhs
+"""
+
 import pygame as pg
-from win32api import GetSystemMetrics
+import multiprocessing
 import time
 import math
 
@@ -19,6 +26,34 @@ orangeStar=pg.image.load('orangeBody.png')
 yellowStar=pg.image.load('yellowBody.png')
 rockyBody=pg.image.load('brownBody.png')
 trail=pg.transform.scale(neutronStar,(1,1))
+
+#for parallel processing
+pool = multiprocessing.Pool(4)
+
+
+def calcFrame(calcx,calcy,vx,vy,m):
+    try:
+        j=0
+        while j < len(x):
+            if i ==j:
+                j+=1
+                continue
+            if calcx[j] != calcx[i]:
+                dir = math.degrees(math.atan((calcy[i]-calcy[j])/(calcx[j]-calcx[i])))
+                if calcx[j] - calcx[i] < 0:
+                    dir+=180
+            else:
+                if calcy[j] < calcy[i]:
+                    dir = 0
+                else:
+                    dir=180
+            
+            f=G*(m[i]*m[j])/(((calcy[j]-calcy[i])**2)+((calcx[j]-calcx[i])**2))            
+            vx[i]+=f*math.cos(math.radians(dir))/(m[i]*fps)
+            vy[i]-=f*math.sin(math.radians(dir))/(m[i]*fps)
+            j+=1
+    except:
+        print('Error occured')
 
 #draw image
 def drawBody(x,y,istrail=0,scale=1.0,body_type=5):
@@ -221,25 +256,8 @@ while not quit:
         disp.blit(show_mass,(x[i]+cx,y[i]+cy))
         
         #physics
-        j=0
-        while j < len(x):
-            if i ==j:
-                j+=1
-                continue
-            if calcx[j] != calcx[i]:
-                dir = math.degrees(math.atan((calcy[i]-calcy[j])/(calcx[j]-calcx[i])))
-                if calcx[j] - calcx[i] < 0:
-                    dir+=180
-            else:
-                if calcy[j] < calcy[i]:
-                    dir = 0
-                else:
-                    dir=180
-            
-            f=G*(m[i]*m[j])/(((calcy[j]-calcy[i])**2)+((calcx[j]-calcx[i])**2))            
-            vx[i]+=f*math.cos(math.radians(dir))/(m[i]*fps)
-            vy[i]-=f*math.sin(math.radians(dir))/(m[i]*fps)
-            j+=1
+        pool.map(calcFrame, (calcx, calcy, vx, vy, m))
+        
         x[i]+=vx[i]/fps
         y[i]+=vy[i]/fps
         tx.append(x[i])
