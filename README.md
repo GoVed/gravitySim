@@ -1,6 +1,21 @@
 # gravitySim
 2D gravity simulator
 
+# New Version!
+
+Now using different methods // MUCH EFFICIENT
+
+Supported methods
+- Python inbuilt variables
+- Numpy array
+- Vectorize GPU
+- Vectorize parallel (CPU)
+- JIT CPU
+- JIT CUDA
+
+
+# Old version below
+
 Made using PyGame so you could run directly or open Python IDE and run.
 
 Basic usage instruction:
