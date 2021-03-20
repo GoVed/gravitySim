@@ -1,0 +1,58 @@
+	# x1=[]
+        # y1=[]
+        # m1=[]
+        # x2=[]
+        # y2=[]
+        # m2=[]
+        # i=0
+        # while i<len(x):
+        #     x1.extend([x[i],]*(len(x)-(i+1)))
+        #     y1.extend([y[i],]*(len(x)-(i+1)))
+        #     m1.extend([m[i],]*(len(x)-(i+1)))
+        #     x2.extend(x[i+1:len(x)])
+        #     y2.extend(y[i+1:len(x)])
+        #     m2.extend(m[i+1:len(x)])
+        #     # j=i+1
+        #     # while j<len(x):
+        #     #     x1.append(x[i])
+        #     #     y1.append(y[i])
+        #     #     x2.append(x[j])
+        #     #     y2.append(y[j])
+        #     #     m1.append(m[i])
+        #     #     m2.append(m[j])
+        #     #     j+=1
+        #     i+=1
+        # x1=np.array(x1,dtype=np.float64)
+        # y1=np.array(y1,dtype=np.float64)
+        # x2=np.array(x2,dtype=np.float64)
+        # y2=np.array(y2,dtype=np.float64)
+        # m1=np.array(m1,dtype=np.float64)
+        # m2=np.array(m2,dtype=np.float64)
+
+	# dir=calcDirOnGPU(temp[0],temp[1],temp[3],temp[4])
+        # f=calcForceOnGPU(temp[0],temp[1],temp[2],temp[3],temp[4],temp[5])
+
+		# j=0
+            # while j<len(x):
+            #     if i!=j:
+            #         vx[i]-=accx[i,j]*time_period
+            #         vy[i]-=accy[i,j]*time_period                                 
+            #     j+=1
+
+
+
+# @vectorize(['float64(float64,float64,float64,float64,float64,float64)'],target='cuda')
+# def calcForceOnGPU(x1,y1,m1,x2,y2,m2):   
+#     return g*(m1*m2)/(((y2-y1)**2)+((x2-x1)**2)) 
+
+# @vectorize(['float64(float64,float64,float64,float64)'],target='cuda')
+# def calcDirOnGPU(x1,y1,x2,y2):   
+#     return math.atan2((y1-y2),(x1-x2))   
+
+# @vectorize(['float64(float64,float64,float64)'],target='cuda')
+# def calcAccXOnGPU(f,d,m):
+#     return f*math.cos(d)/m
+
+# @vectorize(['float64(float64,float64,float64)'],target='cuda')
+# def calcAccYOnGPU(f,d,m):
+#     return f*math.sin(d)/m
