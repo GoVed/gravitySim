@@ -54,9 +54,13 @@ class NpData:
     
     #Sync with pyData
     def __init__(self,pyData:PyData):
-        self.x=np.array([pyData.x,]*len(pyData.x),np.float64)
-        self.y=np.array([pyData.y,]*len(pyData.y),np.float64)
-        self.m=np.array([pyData.m,]*len(pyData.m),np.float64).transpose()
+        self.x=np.array(pyData.x,np.float64)
+        self.x=np.repeat([self.x],len(pyData.x),0)
+        self.y=np.array(pyData.y,np.float64)
+        self.y=np.repeat([self.y],len(pyData.y),0)
+        self.m=np.array(pyData.m,np.float64)
+        self.m=np.repeat([self.m],len(pyData.x),0)
+        
         self.x2=self.x.transpose()
         self.y2=self.y.transpose()
         self.vx=np.array(pyData.vx,np.float64)
@@ -194,21 +198,17 @@ class Sim:
         np.fill_diagonal(accx,0)
         np.fill_diagonal(accy,0)
         
-        print(accx)
-        
-        print(self.npData.vx)
         #Updating the velocity
-        self.npData.vx-=np.sum(accx,axis=0)*time_period
-        self.npData.vy-=np.sum(accy,axis=0)*time_period
-        print(self.npData.vx)
-        print(self.npData.x)
+        self.npData.vx+=np.sum(accx,axis=1)*time_period
+        self.npData.vy+=np.sum(accy,axis=1)*time_period
+        
         #Updating positions
         self.npData.x[0,:]+=self.npData.vx*time_period
         self.npData.y[0,:]+=self.npData.vy*time_period
-        print(self.npData.x)
+        
         #Updating the structure with new position
-        self.npData.x=np.tile(self.npData.x[0,:],(len(self.pyData.x),1))
-        self.npData.y=np.tile(self.npData.y[0,:],(len(self.pyData.x),1))
+        self.npData.x=np.repeat([self.npData.x[0,:]],len(self.pyData.x),0)
+        self.npData.y=np.repeat([self.npData.y[0,:]],len(self.pyData.x),0)
         
     def calcGPU(self,time_period):
         #Calculate accelaration for each object on GPU
@@ -220,29 +220,58 @@ class Sim:
         np.fill_diagonal(accx,0)
         np.fill_diagonal(accy,0)
         
-        #Updating the velocity
-        self.npData.vx+=np.sum(accx,axis=0)*time_period
-        self.npData.vy+=np.sum(accy,axis=0)*time_period
+        # #Updating the velocity
+        self.npData.vx+=np.sum(accx,axis=1)*time_period
+        self.npData.vy+=np.sum(accy,axis=1)*time_period
         
-        #Updating positions
-        self.npData.x[0,:]+=self.npData.vx*time_period
-        self.npData.y[0,:]+=self.npData.vy*time_period
+        # #Updating positions
+        # print('---------------')
+        
+        tx=np.copy(self.npData.x)
+        ty=np.copy(self.npData.y)
+        
+        # px=np.copy(tx)        
+        # py=np.copy(ty)
+        
+        tx[0,:]+=self.npData.vx*time_period
+        ty[0,:]+=self.npData.vy*time_period
         
         #Updating the structure with new position
-        self.npData.x=np.tile(self.npData.x[0,:],(len(self.pyData.x),1))
-        self.npData.y=np.tile(self.npData.y[0,:],(len(self.pyData.x),1))
+        tx=np.repeat([tx[0,:]],len(self.pyData.x),0)
+        ty=np.repeat([ty[0,:]],len(self.pyData.x),0)
+        
+        # self.npData.x=tx
+        # self.npData.y=ty
+       
+        # self.npData.x[0,:]+=self.npData.vx*time_period
+        # self.npData.y[0,:]+=self.npData.vy*time_period
+        
+        # #Updating the structure with new position
+        # self.npData.x=np.repeat([self.npData.x[0,:]],len(self.pyData.x),0)
+        # self.npData.y=np.repeat([self.npData.y[0,:]],len(self.pyData.x),0)
+        
         #update velocity and position of each object
-        # i=0
-        # while i<len(self.pyData.x):
-        #     self.npData.vx[i]+=np.sum(accx[i,:])*time_period
-        #     self.npData.vy[i]+=np.sum(accy[i,:])*time_period
+        i=0
+        while i<len(self.pyData.x):
+            # self.npData.vx[i]+=np.sum(accx[i,:])*time_period
+            # self.npData.vy[i]+=np.sum(accy[i,:])*time_period
             
-        #     self.npData.x[:,i]+=self.npData.vx[i]*time_period
-        #     self.npData.y[:,i]+=self.npData.vy[i]*time_period
+            self.npData.x[:,i]+=self.npData.vx[i]*time_period
+            self.npData.y[:,i]+=self.npData.vy[i]*time_period
             
             
             
-        #     i+=1
+            i+=1
+        # print('-----------------------')
+        # print("From method B",tx,ty)
+        # print("From method A",self.npData.x,self.npData.y)
+        if not np.allclose(tx,self.npData.x) or not np.allclose(ty,self.npData.y):
+            
+            print(tx,ty)
+            print(self.npData.x,self.npData.y)
+        # else:
+        #     self.npData.x=np.copy(tx)
+        #     self.npData.y=np.copy(ty)
         
     #Numba GPU
     @vectorize(['float64(float64,float64,float64,float64,float64)'],target='cuda')

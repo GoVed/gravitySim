@@ -6,9 +6,9 @@ Created on Sun Feb  7 14:30:37 2021
 """
 
 import pyglet
-import gravitySimV2
+import gravitySim
 
-gs=gravitySimV2.Sim()
+gs=gravitySim.Sim()
 
 #interface variables
 width=1280
@@ -60,8 +60,9 @@ keys={'w':False,'s':False,'a':False,'d':False,'q':False,'e':False}
 # temp = pyglet.shapes.Circle(0,0,500,color=(255,255,255),batch=batch)
 # circles.append(temp)
 
-gs.addObject(width/2,height/2,0,0,1e+14,25)
-gs.addObject(800,height/2,0,2,1e+14,5)
+# gs.addObject(width/2,height/2,0,0,1e+14,25)
+gs.addObject(width/2+100,height/2,0,-1,1e+15,5)
+gs.addObject(width/2-100,height/2,0,10,1e+14,5)
 # gs.addRandomObjects(200,mr=1e+12)
 # gs.addRandomObjects(512,vxr=1,vyr=1,mr=1e+13,rr=6)
 
@@ -141,7 +142,7 @@ def update(frame_time):
         if frame_time != 0:
             
             #update fps meter
-            fpstxt.text = gravitySimV2.Modes.modes[mode] +' '+str(round(1/frame_time,3))+' fps'
+            fpstxt.text = gravitySim.Modes.modes[mode] +' '+str(round(1/frame_time,3))+' fps'
             
             #calculate next time period
             
@@ -215,10 +216,10 @@ def on_key_press(symbol, modifier):
         velocityBasedColor = not velocityBasedColor
         
     if symbol == pyglet.window.key.G:         
-        mode=(mode+1)%gravitySimV2.Modes.length
+        mode=(mode+1)%gravitySim.Modes.length
         
     if symbol == pyglet.window.key.T:         
-        mode=(mode-1)%gravitySimV2.Modes.length
+        mode=(mode-1)%gravitySim.Modes.length
         
     if symbol == pyglet.window.key.I:         
         showInfo = not showInfo
