@@ -269,9 +269,9 @@ class Sim:
             
             print(tx,ty)
             print(self.npData.x,self.npData.y)
-        # else:
-        #     self.npData.x=np.copy(tx)
-        #     self.npData.y=np.copy(ty)
+        else:
+            self.npData.x=np.copy(tx)
+            self.npData.y=np.copy(ty)
         
     #Numba GPU
     @vectorize(['float64(float64,float64,float64,float64,float64)'],target='cuda')
