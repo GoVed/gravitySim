@@ -220,18 +220,13 @@ class Sim:
         np.fill_diagonal(accx,0)
         np.fill_diagonal(accy,0)
         
-        # #Updating the velocity
+        #Updating the velocity
         self.npData.vx+=np.sum(accx,axis=1)*time_period
         self.npData.vy+=np.sum(accy,axis=1)*time_period
-        
-        # #Updating positions
-        # print('---------------')
         
         tx=np.copy(self.npData.x)
         ty=np.copy(self.npData.y)
         
-        # px=np.copy(tx)        
-        # py=np.copy(ty)
         
         tx[0,:]+=self.npData.vx*time_period
         ty[0,:]+=self.npData.vy*time_period
@@ -240,38 +235,10 @@ class Sim:
         tx=np.repeat([tx[0,:]],len(self.pyData.x),0)
         ty=np.repeat([ty[0,:]],len(self.pyData.x),0)
         
-        # self.npData.x=tx
-        # self.npData.y=ty
-       
-        # self.npData.x[0,:]+=self.npData.vx*time_period
-        # self.npData.y[0,:]+=self.npData.vy*time_period
+        self.npData.x[:]=tx
+        self.npData.y[:]=ty
         
-        # #Updating the structure with new position
-        # self.npData.x=np.repeat([self.npData.x[0,:]],len(self.pyData.x),0)
-        # self.npData.y=np.repeat([self.npData.y[0,:]],len(self.pyData.x),0)
-        
-        #update velocity and position of each object
-        i=0
-        while i<len(self.pyData.x):
-            # self.npData.vx[i]+=np.sum(accx[i,:])*time_period
-            # self.npData.vy[i]+=np.sum(accy[i,:])*time_period
             
-            self.npData.x[:,i]+=self.npData.vx[i]*time_period
-            self.npData.y[:,i]+=self.npData.vy[i]*time_period
-            
-            
-            
-            i+=1
-        # print('-----------------------')
-        # print("From method B",tx,ty)
-        # print("From method A",self.npData.x,self.npData.y)
-        if not np.allclose(tx,self.npData.x) or not np.allclose(ty,self.npData.y):
-            
-            print(tx,ty)
-            print(self.npData.x,self.npData.y)
-        else:
-            self.npData.x=np.copy(tx)
-            self.npData.y=np.copy(ty)
         
     #Numba GPU
     @vectorize(['float64(float64,float64,float64,float64,float64)'],target='cuda')
