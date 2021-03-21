@@ -60,11 +60,13 @@ keys={'w':False,'s':False,'a':False,'d':False,'q':False,'e':False}
 # temp = pyglet.shapes.Circle(0,0,500,color=(255,255,255),batch=batch)
 # circles.append(temp)
 
-# gs.addObject(width/2,height/2,0,0,1e+14,25)
-gs.addObject(width/2+100,height/2,0,-1,1e+15,5)
-gs.addObject(width/2-100,height/2,0,10,1e+14,5)
+
+# gs.addObject(width/2+100,height/2,0,-1,1e+15,5)
+# gs.addObject(width/2-100,height/2,0,10,1e+14,5)
+
+gs.addObject(width/2,height/2,0,0,1e+15,25)
 # gs.addRandomObjects(200,mr=1e+12)
-# gs.addRandomObjects(512,vxr=1,vyr=1,mr=1e+13,rr=6)
+gs.addRandomObjects(512,vxr=1,vyr=1,mr=1e+13,rr=6)
 
 gs.syncNumpy()
 
@@ -134,7 +136,7 @@ def updateOnNpData():
             
         i+=1
 
-
+updateFunc={0:updateOnPyData,1:updateOnNpData,2:updateOnNpData,3:updateOnNpData,4:updateOnNpData}
 def update(frame_time):
     global camx,camy,camZoom,mode  
     
@@ -155,13 +157,9 @@ def update(frame_time):
     #clearing all object every frame
     circles.clear()
     
-    updateFunc={0:updateOnPyData,1:updateOnNpData,2:updateOnNpData}
     
     updateFunc[mode]()
-    
-    
-         
-            
+   
     if pendingNewObject:
         rx=(newObjX-camx)*camZoom
         ry=(newObjY-camy)*camZoom

@@ -16,8 +16,7 @@ from dataclasses import dataclass
 g=6.674e-11
 
 class PyData:
-    #constants
-    g=6.674e-11
+    
     
     #position
     x=[]
@@ -203,12 +202,19 @@ class Sim:
         self.npData.vy+=np.sum(accy,axis=1)*time_period
         
         #Updating positions
-        self.npData.x[0,:]+=self.npData.vx*time_period
-        self.npData.y[0,:]+=self.npData.vy*time_period
+        tx=np.copy(self.npData.x)
+        ty=np.copy(self.npData.y)
+        
+        
+        tx[0,:]+=self.npData.vx*time_period
+        ty[0,:]+=self.npData.vy*time_period
         
         #Updating the structure with new position
-        self.npData.x=np.repeat([self.npData.x[0,:]],len(self.pyData.x),0)
-        self.npData.y=np.repeat([self.npData.y[0,:]],len(self.pyData.x),0)
+        tx=np.repeat([tx[0,:]],len(self.pyData.x),0)
+        ty=np.repeat([ty[0,:]],len(self.pyData.x),0)
+        
+        self.npData.x[:]=tx
+        self.npData.y[:]=ty
         
     def calcGPU(self,time_period):
         #Calculate accelaration for each object on GPU
@@ -224,6 +230,9 @@ class Sim:
         self.npData.vx+=np.sum(accx,axis=1)*time_period
         self.npData.vy+=np.sum(accy,axis=1)*time_period
         
+        
+        
+        #Updating the position
         tx=np.copy(self.npData.x)
         ty=np.copy(self.npData.y)
         
@@ -238,6 +247,68 @@ class Sim:
         self.npData.x[:]=tx
         self.npData.y[:]=ty
         
+    def calcNumbaParallel(self,time_period):
+        #Calculate accelaration for each object on GPU
+        
+        accx=self.calcDirectAccXOnNumbaParallel(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)
+        accy=self.calcDirectAccYOnNumbaParallel(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)
+        
+        #Diagonal elements are calculation over same objects
+        np.fill_diagonal(accx,0)
+        np.fill_diagonal(accy,0)
+        
+        #Updating the velocity
+        self.npData.vx+=np.sum(accx,axis=1)*time_period
+        self.npData.vy+=np.sum(accy,axis=1)*time_period
+        
+        
+        
+        #Updating the position
+        tx=np.copy(self.npData.x)
+        ty=np.copy(self.npData.y)
+        
+        
+        tx[0,:]+=self.npData.vx*time_period
+        ty[0,:]+=self.npData.vy*time_period
+        
+        #Updating the structure with new position
+        tx=np.repeat([tx[0,:]],len(self.pyData.x),0)
+        ty=np.repeat([ty[0,:]],len(self.pyData.x),0)
+        
+        self.npData.x[:]=tx
+        self.npData.y[:]=ty
+        
+    def calcJIT(self,time_period):
+        #Calculate accelaration for each object using jit
+        accx,accy=self.calcDirectAccOnJit(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)
+        
+        # accx=self.calcDirectAccXOnJit(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)
+        # accy=self.calcDirectAccYOnJit(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)
+        
+        # if np.array_equal(tx,accx) and np.array_equal(ty,accy):
+        #     print('equal')
+        # else:
+        #     print('not equal')
+        
+        #Updating the velocity
+        
+        self.npData.vx+=accx*time_period
+        self.npData.vy+=accy*time_period
+              
+        #Updating the position
+        tx=np.copy(self.npData.x)
+        ty=np.copy(self.npData.y)
+        
+        
+        tx[0,:]+=self.npData.vx*time_period
+        ty[0,:]+=self.npData.vy*time_period
+        
+        #Updating the structure with new position
+        tx=np.repeat([tx[0,:]],len(self.pyData.x),0)
+        ty=np.repeat([ty[0,:]],len(self.pyData.x),0)
+        
+        self.npData.x[:]=tx
+        self.npData.y[:]=ty
             
         
     #Numba GPU
@@ -248,6 +319,52 @@ class Sim:
     @vectorize(['float64(float64,float64,float64,float64,float64)'],target='cuda')
     def calcDirectAccYOnGPU(x1,y1,x2,y2,m2):   
         return g*m2/(((y2-y1)**2)+((x2-x1)**2))*math.sin(math.atan2((y1-y2),(x1-x2)))
+    
+    #Numba Parallel
+    @vectorize(['float64(float64,float64,float64,float64,float64)'],target='parallel')
+    def calcDirectAccXOnNumbaParallel(x1,y1,x2,y2,m2):   
+        return g*m2/(((y2-y1)**2)+((x2-x1)**2))*math.cos(math.atan2((y1-y2),(x1-x2)))
+    
+    @vectorize(['float64(float64,float64,float64,float64,float64)'],target='parallel')
+    def calcDirectAccYOnNumbaParallel(x1,y1,x2,y2,m2):   
+        return g*m2/(((y2-y1)**2)+((x2-x1)**2))*math.sin(math.atan2((y1-y2),(x1-x2)))
+    
+    #Using jit
+    @staticmethod
+    @jit(nopython=True, parallel=True)
+    def calcDirectAccOnJit(x1,y1,x2,y2,m2):
+        
+        resultx = np.zeros(x1.shape[0])
+        resulty = np.zeros(x1.shape[0])
+        for i in range(x1.shape[0]):
+            for j in range(x1.shape[1]):
+                if i!=j:
+                    f=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))
+                    d=math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j]))
+                    resultx[i]+=f*math.cos(d)
+                    resulty[i]+=f*math.sin(d)
+        return resultx,resulty
+    @staticmethod
+    @jit(nopython=True, parallel=True)
+    def calcDirectAccXOnJit(x1,y1,x2,y2,m2):
+        
+        result = np.zeros(x1.shape[0])
+        for i in range(x1.shape[0]):
+            for j in range(x1.shape[1]):
+                if i!=j:
+                    result[i]+=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))*math.cos(math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j])))
+        return result
+    
+    @staticmethod
+    @jit(nopython=True, parallel=True)
+    def calcDirectAccYOnJit(x1,y1,x2,y2,m2):  
+        
+        result = np.zeros(x1.shape[0])
+        for i in range(x1.shape[0]):
+            for j in range(x1.shape[1]):
+                if i!=j:
+                    result[i]+=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))*math.sin(math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j])))
+        return result 
         
         
     #for benchmarking / testing efficiency  
@@ -277,4 +394,4 @@ class Sim:
         print('Calc/sec=',calcn/(end_time-start_time))
         
     #for calling out specific function
-    funcName={0:calcCPU,1:calcGPU,2:calcNumpy}
+    funcName={0:calcCPU,1:calcGPU,2:calcNumpy,3:calcNumbaParallel,4:calcJIT}
