@@ -74,9 +74,47 @@ class NpData:
         self.vy=None
         self.m=None
         self.r=None
-
+        
 class CUDAData:
-    pass
+    x=None
+    y=None
+    x2=None
+    y2=None
+    vx=None
+    vy=None
+    m=None
+    r=None
+    threadsperblock=None
+    blockspergrid_x=None
+    blockspergrid_y=None
+    blockspergrid=None
+    
+    #Sync with pyData
+    def __init__(self,npData:NpData):
+        self.x=cuda.to_device(npData.x)
+        self.y=cuda.to_device(npData.y)
+        self.m=cuda.to_device(npData.m)        
+        self.x2=cuda.to_device(npData.x2)
+        self.y2=cuda.to_device(npData.y2)
+        self.vx=cuda.to_device(npData.vx)
+        self.vy=cuda.to_device(npData.vy)        
+        self.r=cuda.to_device(npData.r)
+        
+        self.threadsperblock = (1,1)
+        self.blockspergrid_x = int(math.ceil(npData.x.shape[0] / self.threadsperblock[0]))
+        self.blockspergrid_y = int(math.ceil(npData.x.shape[1] / self.threadsperblock[1]))
+        self.blockspergrid = (self.blockspergrid_x, self.blockspergrid_y)
+    
+    #reset to null state
+    def reset(self):
+        self.x=None
+        self.y=None
+        self.vx=None
+        self.vy=None
+        self.m=None
+        self.r=None
+
+
 
 @dataclass
 class Modes:
@@ -98,11 +136,16 @@ class Sim:
     #Numpy data, make sure to init
     npData=None
     
-    
+    #CUDA data, make sure to init
+    cudaData=None
     
     def syncNumpy(self):
         self.npData=None
         self.npData=NpData(self.pyData)
+        
+    def syncCUDA(self):
+        self.cudaData=None
+        self.cudaData=CUDAData(self.npData)
     
     #Save the current state
     def save(self,name=''):
@@ -280,18 +323,9 @@ class Sim:
         
     def calcJIT(self,time_period):
         #Calculate accelaration for each object using jit
-        accx,accy=self.calcDirectAccOnJit(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)
+        accx,accy=self.calcDirectAccOnJit(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)        
         
-        # accx=self.calcDirectAccXOnJit(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)
-        # accy=self.calcDirectAccYOnJit(self.npData.x,self.npData.y,self.npData.x2,self.npData.y2,self.npData.m)
-        
-        # if np.array_equal(tx,accx) and np.array_equal(ty,accy):
-        #     print('equal')
-        # else:
-        #     print('not equal')
-        
-        #Updating the velocity
-        
+        #Updating the velocity        
         self.npData.vx+=accx*time_period
         self.npData.vy+=accy*time_period
               
@@ -309,6 +343,43 @@ class Sim:
         
         self.npData.x[:]=tx
         self.npData.y[:]=ty
+        
+    def calcCUDAJIT(self,time_period):
+        #Calculate accelaration for each object using cuda jit
+        
+        
+        
+        self.calcDirectAccOnCudaJit[self.cudaData.blockspergrid, self.cudaData.threadsperblock](self.cudaData.x2,self.cudaData.y2,self.cudaData.x,self.cudaData.y,self.cudaData.m,self.cudaData.vx,self.cudaData.vy,time_period)
+        self.cudaData.vx.copy_to_host(self.npData.vx)
+        self.cudaData.vy.copy_to_host(self.npData.vy)
+        #Updating the position
+        tx=np.copy(self.npData.x)
+        ty=np.copy(self.npData.y)
+    
+        tx[0,:]+=self.npData.vx*time_period
+        ty[0,:]+=self.npData.vy*time_period
+        
+        #Updating the structure with new position
+        tx=np.repeat([tx[0,:]],len(self.pyData.x),0)
+        ty=np.repeat([ty[0,:]],len(self.pyData.x),0)
+        
+        self.npData.x[:]=tx
+        self.npData.y[:]=ty
+        
+        
+        self.cudaData.x=cuda.to_device(self.npData.x)
+        self.cudaData.y=cuda.to_device(self.npData.y)        
+        self.cudaData.x2=cuda.to_device(self.npData.x2)
+        self.cudaData.y2=cuda.to_device(self.npData.y2)
+        # temp[13].copy_to_host(temp[6])
+        # temp[14].copy_to_host(temp[7])
+        # vx=temp[6].tolist()
+        # vy=temp[7].tolist()
+        
+        # temp[8]=cuda.to_device(temp[0])
+        # temp[9]=cuda.to_device(temp[1])
+        # temp[10]=cuda.to_device(temp[3]) 
+        # temp[11]=cuda.to_device(temp[4]) 
             
         
     #Numba GPU
@@ -344,29 +415,17 @@ class Sim:
                     resultx[i]+=f*math.cos(d)
                     resulty[i]+=f*math.sin(d)
         return resultx,resulty
-    @staticmethod
-    @jit(nopython=True, parallel=True)
-    def calcDirectAccXOnJit(x1,y1,x2,y2,m2):
-        
-        result = np.zeros(x1.shape[0])
-        for i in range(x1.shape[0]):
-            for j in range(x1.shape[1]):
+     
+    #Using cuda.jit
+    @cuda.jit(inline=True)
+    def calcDirectAccOnCudaJit(x1,y1,x2,y2,m2,vx,vy,t):  
+        i,j=cuda.grid(2)
+        if i < x1.shape[0]:    
+            if j < x1.shape[1]:
                 if i!=j:
-                    result[i]+=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))*math.cos(math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j])))
-        return result
-    
-    @staticmethod
-    @jit(nopython=True, parallel=True)
-    def calcDirectAccYOnJit(x1,y1,x2,y2,m2):  
-        
-        result = np.zeros(x1.shape[0])
-        for i in range(x1.shape[0]):
-            for j in range(x1.shape[1]):
-                if i!=j:
-                    result[i]+=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))*math.sin(math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j])))
-        return result 
-        
-        
+                    vx[i]-=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))*math.cos(math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j])))*t
+                    vy[i]-=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))*math.sin(math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j])))*t
+                       
     #for benchmarking / testing efficiency  
     def benchmark(self,objects=100,calcn=10000,frameWise=False,mode=Modes.cpu):
         print('Starting Benchmark')
@@ -394,4 +453,4 @@ class Sim:
         print('Calc/sec=',calcn/(end_time-start_time))
         
     #for calling out specific function
-    funcName={0:calcCPU,1:calcGPU,2:calcNumpy,3:calcNumbaParallel,4:calcJIT}
+    funcName={0:calcCPU,1:calcGPU,2:calcNumpy,3:calcNumbaParallel,4:calcJIT,5:calcCUDAJIT}

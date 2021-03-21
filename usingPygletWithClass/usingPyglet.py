@@ -69,6 +69,7 @@ gs.addObject(width/2,height/2,0,0,1e+15,25)
 gs.addRandomObjects(512,vxr=1,vyr=1,mr=1e+13,rr=6)
 
 gs.syncNumpy()
+gs.syncCUDA()
 
 
 
@@ -135,8 +136,34 @@ def updateOnNpData():
             circles.append(temp)
             
         i+=1
+        
+def updateOnCUDAData():
+    i=0
+    while i<gs.cudaData.x.shape[0]:
+        rx=(gs.cudaData.x[0,i]-camx)*camZoom
+        ry=(gs.cudaData.y[0,i]-camy)*camZoom
+        rr=gs.cudaData.r[i]*camZoom
+        
+        if rx+rr>0 and rx-rr<width and ry+rr>0 and ry-rr<width:
+            if velocityBasedColor:
+                ix=abs(gs.cudaData.vx[i]/(abs(gs.cudaData.vx[i])+10))
+                iy=abs(gs.cudaData.vy[i]/(abs(gs.cudaData.vy[i])+10))
+                intensity=((gs.cudaData.vx[i]**2)+(gs.cudaData.vy[i]**2))**0.5
+                
+                intensity=intensity/(intensity+10)
+                cb=int(255*(1-intensity))
+                cg=int(127*ix*intensity)
+                cr=int(127*iy*intensity)
+                
+                temp = pyglet.shapes.Circle(rx,ry,rr,color=(cr,cg,cb),batch=batch)
+                
+            else:
+                temp = pyglet.shapes.Circle(rx,ry,rr,color=(255,255,255),batch=batch)
+            circles.append(temp)
+            
+        i+=1
 
-updateFunc={0:updateOnPyData,1:updateOnNpData,2:updateOnNpData,3:updateOnNpData,4:updateOnNpData}
+updateFunc={0:updateOnPyData,1:updateOnNpData,2:updateOnNpData,3:updateOnNpData,4:updateOnNpData,5:updateOnNpData}
 def update(frame_time):
     global camx,camy,camZoom,mode  
     

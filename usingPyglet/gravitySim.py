@@ -298,9 +298,6 @@ def calcDirectAccYOnNumpy(x1,y1,x2,y2,m2):
     return g*np.multiply(np.divide(m2,(np.add((np.power(np.subtract(y2,y1),2)),np.power(np.subtract(x2,x1),2)))),np.sin(np.arctan2(np.subtract(y1,y2),np.subtract(x1,x2))))
 
 #Using cuda.jit
-
-    
-
 @cuda.jit(inline=True)
 def calcDirectAccOnCudaJit(x1,y1,x2,y2,m2,vx,vy,t):  
     i,j=cuda.grid(2)
