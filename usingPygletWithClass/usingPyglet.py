@@ -66,7 +66,7 @@ keys={'w':False,'s':False,'a':False,'d':False,'q':False,'e':False}
 
 gs.addObject(width/2,height/2,0,0,1e+15,25)
 # gs.addRandomObjects(200,mr=1e+12)
-gs.addRandomObjects(512,vxr=1,vyr=1,mr=1e+13,rr=6)
+gs.addRandomObjects(256,vxr=1,vyr=1,mr=1e+12,rr=6)
 
 gs.syncNumpy()
 gs.syncCUDA()

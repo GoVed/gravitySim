@@ -78,8 +78,6 @@ class NpData:
 class CUDAData:
     x=None
     y=None
-    x2=None
-    y2=None
     vx=None
     vy=None
     m=None
@@ -91,13 +89,11 @@ class CUDAData:
     
     #Sync with pyData
     def __init__(self,npData:NpData):
-        self.x=cuda.to_device(npData.x)
-        self.y=cuda.to_device(npData.y)
-        self.m=cuda.to_device(npData.m)        
-        self.x2=cuda.to_device(npData.x2)
-        self.y2=cuda.to_device(npData.y2)
+        self.x=cuda.to_device(npData.x[0,:])
+        self.y=cuda.to_device(npData.y[0,:])
+        self.m=cuda.to_device(npData.m[0,:])        
         self.vx=cuda.to_device(npData.vx)
-        self.vy=cuda.to_device(npData.vy)        
+        self.vy=cuda.to_device(npData.vy)            
         self.r=cuda.to_device(npData.r)
         
         self.threadsperblock = (1,1)
@@ -349,28 +345,30 @@ class Sim:
         
         
         
-        self.calcDirectAccOnCudaJit[self.cudaData.blockspergrid, self.cudaData.threadsperblock](self.cudaData.x2,self.cudaData.y2,self.cudaData.x,self.cudaData.y,self.cudaData.m,self.cudaData.vx,self.cudaData.vy,time_period)
+        self.calcDirectAccOnCudaJit[self.cudaData.blockspergrid, self.cudaData.threadsperblock](self.cudaData.x,self.cudaData.y,self.cudaData.m,self.cudaData.vx,self.cudaData.vy,time_period)
+        
+        tx=np.zeros(self.npData.x.shape[0])
+        ty=np.zeros(self.npData.x.shape[0])
         self.cudaData.vx.copy_to_host(self.npData.vx)
         self.cudaData.vy.copy_to_host(self.npData.vy)
         #Updating the position
-        tx=np.copy(self.npData.x)
-        ty=np.copy(self.npData.y)
+        tx=np.copy(self.npData.x[0,:])
+        ty=np.copy(self.npData.y[0,:])
     
-        tx[0,:]+=self.npData.vx*time_period
-        ty[0,:]+=self.npData.vy*time_period
+        tx+=self.npData.vx*time_period
+        ty+=self.npData.vy*time_period
         
         #Updating the structure with new position
-        tx=np.repeat([tx[0,:]],len(self.pyData.x),0)
-        ty=np.repeat([ty[0,:]],len(self.pyData.x),0)
+        tx=np.repeat([tx],len(self.pyData.x),0)
+        ty=np.repeat([ty],len(self.pyData.x),0)
         
         self.npData.x[:]=tx
         self.npData.y[:]=ty
         
         
-        self.cudaData.x=cuda.to_device(self.npData.x)
-        self.cudaData.y=cuda.to_device(self.npData.y)        
-        self.cudaData.x2=cuda.to_device(self.npData.x2)
-        self.cudaData.y2=cuda.to_device(self.npData.y2)
+        self.cudaData.x=cuda.to_device(self.npData.x[0,:])
+        self.cudaData.y=cuda.to_device(self.npData.y[0,:])        
+        
         # temp[13].copy_to_host(temp[6])
         # temp[14].copy_to_host(temp[7])
         # vx=temp[6].tolist()
@@ -418,13 +416,13 @@ class Sim:
      
     #Using cuda.jit
     @cuda.jit(inline=True)
-    def calcDirectAccOnCudaJit(x1,y1,x2,y2,m2,vx,vy,t):  
+    def calcDirectAccOnCudaJit(x,y,m,vx,vy,t):  
         i,j=cuda.grid(2)
-        if i < x1.shape[0]:    
-            if j < x1.shape[1]:
-                if i!=j:
-                    vx[i]-=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))*math.cos(math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j])))*t
-                    vy[i]-=g*m2[i,j]/(((y2[i,j]-y1[i,j])**2)+((x2[i,j]-x1[i,j])**2))*math.sin(math.atan2((y1[i,j]-y2[i,j]),(x1[i,j]-x2[i,j])))*t
+        if i < x.shape[0]:    
+            if j < x.shape[0]:
+                if i!=j:                    
+                    vx[i]-=g*m[j]/(((y[j]-y[i])**2)+((x[j]-x[i])**2))*math.cos(math.atan2((y[i]-y[j]),(x[i]-x[j])))*t
+                    vy[i]-=g*m[j]/(((y[j]-y[i])**2)+((x[j]-x[i])**2))*math.sin(math.atan2((y[i]-y[j]),(x[i]-x[j])))*t                    
                        
     #for benchmarking / testing efficiency  
     def benchmark(self,objects=100,calcn=10000,frameWise=False,mode=Modes.cpu):
