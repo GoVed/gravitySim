@@ -71,10 +71,6 @@ gs.addRandomObjects(256,vxr=1,vyr=1,mr=1e+12,rr=6)
 gs.syncNumpy()
 gs.syncCUDA()
 
-
-
-    
-
 @win.event
 def on_draw():
     win.clear()
