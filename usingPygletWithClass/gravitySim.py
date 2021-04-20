@@ -420,9 +420,12 @@ class Sim:
         for i in range(objects):
             self.addObject(random.randint(-5000,5000),random.randint(-5000,5000),random.randint(-5000,5000),random.randint(-5000,5000),random.randint(0,1e18),5,False)
 
-        if mode==2:
-            print('Generating Numpy array')
-            self.syncNumpy()
+        print('Generating Numpy array')
+        self.syncNumpy()
+        
+        print('Generating CUDA array')
+        self.syncCUDA()
+            
 
         print('starting calculations')
         start_time=time.time()
@@ -436,6 +439,29 @@ class Sim:
         end_time=time.time()
         print('Completed',calcn,'steps for',objects,'objects in',(end_time-start_time),'seconds')
         print('Calc/sec=',calcn/(end_time-start_time))
+        return calcn/(end_time-start_time)
 
     #for calling out specific function
     funcName={0:calcCPU,1:calcGPU,2:calcNumpy,3:calcNumbaParallel,4:calcJIT,5:calcCUDAJIT}
+    
+    def compareBenchmark(self,start=2,max=512):
+        result=[]
+        n=100
+        out=[]
+        i=start
+        while i<=max:
+            out.append(i)
+            i*=2
+        result.append(out)
+        for mode in range(6):
+            out=[]
+            i=start
+            last=0.1
+            while i<=max:                
+                startTime=time.time()
+                out.append(self.benchmark(i,int(n/last),mode=mode))
+                last=time.time()-startTime
+                i*=2
+            result.append(out)
+        return result
+            

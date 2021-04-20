@@ -64,12 +64,13 @@ keys={'w':False,'s':False,'a':False,'d':False,'q':False,'e':False}
 # gs.addObject(width/2+100,height/2,0,-1,1e+15,5)
 # gs.addObject(width/2-100,height/2,0,10,1e+14,5)
 
-gs.addObject(width/2,height/2,0,0,1e+15,25)
+# gs.addObject(width/2,height/2,0,0,1e+15,25)
 # gs.addRandomObjects(200,mr=1e+12)
-gs.addRandomObjects(256,vxr=1,vyr=1,mr=1e+12,rr=6)
+# gs.addRandomObjects(256,vxr=1,vyr=1,mr=1e+12,rr=6)
 
-gs.syncNumpy()
-gs.syncCUDA()
+if len(gs.pyData.x)>0:
+    gs.syncNumpy()
+    gs.syncCUDA()
 
 @win.event
 def on_draw():
@@ -160,6 +161,7 @@ def updateOnCUDAData():
         i+=1
 
 updateFunc={0:updateOnPyData,1:updateOnNpData,2:updateOnNpData,3:updateOnNpData,4:updateOnNpData,5:updateOnNpData}
+
 def update(frame_time):
     global camx,camy,camZoom,mode  
     
@@ -171,7 +173,8 @@ def update(frame_time):
             
             #calculate next time period
             
-            gs.calc(frame_time,mode=mode)
+            if len(gs.pyData.x)>0:
+                gs.calc(frame_time,mode=mode)
 
             
     
@@ -314,6 +317,8 @@ def on_mouse_press(x, y, button, modifier):
                 isAddingObject=False
                 pendingNewObject=False
                 gs.addObject(newObjX, newObjY, newObjVX, newObjVY, newObjM, newObjR)
+                gs.syncNumpy()
+                gs.syncCUDA()
             else:
                 newObjX=x
                 newObjY=y
