@@ -40,6 +40,15 @@ class PyData:
         self.vy.clear()
         self.m.clear()
         self.r.clear()
+        
+    def fromNp(self,npData):
+        self.reset()
+        self.x=npData.x[0,:].tolist()
+        self.y=npData.y[0,:].tolist()
+        self.vx=npData.vx.tolist()
+        self.vy=npData.vy.tolist()
+        self.m=npData.m[0,:].tolist()
+        self.r=npData.r.tolist()
 
 class NpData:
     x=None
@@ -142,6 +151,9 @@ class Sim:
     def syncCUDA(self):
         self.cudaData=None
         self.cudaData=CUDAData(self.npData)
+        
+    def syncPyData(self):    
+        self.pyData.fromNp(self.npData)
 
     #Save the current state
     def save(self,name=''):

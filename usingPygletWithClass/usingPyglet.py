@@ -61,16 +61,16 @@ keys={'w':False,'s':False,'a':False,'d':False,'q':False,'e':False}
 # circles.append(temp)
 
 
-# gs.addObject(width/2+100,height/2,0,-1,1e+15,5)
-# gs.addObject(width/2-100,height/2,0,10,1e+14,5)
+gs.addObject(width/2+100,height/2,0,-1,1e+15,5)
+gs.addObject(width/2-100,height/2,0,10,1e+14,5)
 
 # gs.addObject(width/2,height/2,0,0,1e+15,25)
 # gs.addRandomObjects(200,mr=1e+12)
 # gs.addRandomObjects(256,vxr=1,vyr=1,mr=1e+12,rr=6)
 
-if len(gs.pyData.x)>0:
-    gs.syncNumpy()
-    gs.syncCUDA()
+# if len(gs.pyData.x)>0:
+#     gs.syncNumpy()
+#     gs.syncCUDA()
 
 @win.event
 def on_draw():
@@ -242,8 +242,25 @@ def on_key_press(symbol, modifier):
     if symbol == pyglet.window.key.G:         
         mode=(mode+1)%gravitySim.Modes.length
         
+        if mode==1:
+            if len(gs.pyData.x)>0:
+                gs.syncNumpy()
+        
+        if mode==5:
+            if len(gs.pyData.x)>0:
+                gs.syncCUDA()
+        
     if symbol == pyglet.window.key.T:         
         mode=(mode-1)%gravitySim.Modes.length
+        
+        if mode==0:
+            if len(gs.pyData.x)>0:
+                gs.syncPyData()
+                
+        if mode==5:
+            if len(gs.pyData.x)>0:
+                gs.syncNumpy()
+                gs.syncCUDA()
         
     if symbol == pyglet.window.key.I:         
         showInfo = not showInfo
