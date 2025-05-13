@@ -1,6 +1,9 @@
 # gravitySim
 2D gravity simulator
 
+![image](https://github.com/user-attachments/assets/72929df7-a7c7-46e6-a2b4-7071c69fec20)
+
+
 # New Version!
 
 Now using different methods // MUCH EFFICIENT
